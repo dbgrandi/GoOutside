@@ -141,9 +141,54 @@ NS_ENUM(NSInteger, AXELastBuildType){
     NSNumber *builds = stats[@"builds"];
     NSNumber *buildTime = stats[@"totalBuildTime"];
     NSAlert *alert = [[NSAlert alloc] init];
-    NSString *text = [NSString stringWithFormat:@"Hello, developer. You've had %@ builds in Xcode recently that took %@ seconds. Go outside and play.", builds, buildTime];
+    NSString *text = [NSString stringWithFormat:@"Hello, developer. You've had %@ builds in Xcode recently that took %@. Go outside and play.", builds, [self textFrom:buildTime]];
     [alert setMessageText:text];
     [alert runModal];
+}
+
+- (NSString *)unit:(NSString *)unit withValue:(NSInteger)value
+{
+    switch (value) {
+        case 0:
+            return @"";
+            
+        case 1:
+            return [NSString stringWithFormat:@"%td %@", value, unit];
+            
+        default:
+            return [NSString stringWithFormat:@"%td %@s", value, unit];
+    }
+}
+
+- (NSString *)textFrom:(NSNumber *)buildTime
+{
+    // set second, minute, hour or more...
+    NSArray *units = @[@"second", @"minute", @"hour"];
+    NSArray *conversions = @[@(60), @(60), @(NSIntegerMax)];
+    
+    // get the value from input buildTime
+    NSInteger value = [buildTime integerValue];
+    
+    // calculate and got strings
+    NSMutableArray *texts = [NSMutableArray array];
+    for (NSInteger index = 0; index < units.count; index++) {
+        NSInteger conversion = [conversions[index] integerValue];
+        [texts addObject:[self unit:units[index] withValue:value % conversion]];
+        if (value >= conversion) {
+            value /= conversion;
+        } else {
+            break;
+        }
+    }
+    
+    // reverse and combine strings
+    NSPredicate *predicate = [NSPredicate predicateWithFormat:@"self.length > 0"];
+    NSArray *filterTexts = [texts filteredArrayUsingPredicate:predicate];
+    if (filterTexts.count) {
+        return [[[filterTexts reverseObjectEnumerator] allObjects] componentsJoinedByString:@", "];
+    } else {
+        return @"0 second";
+    }
 }
 
 - (void)buildStarted:(NSNotification *)notification
